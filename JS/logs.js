@@ -88,6 +88,7 @@ function mostrarEstructura() {
  * ============================================================
  */
 
+/*
 const configuracion = [
 
     {
@@ -235,6 +236,7 @@ const configuracion = [
     }
 
 ];
+*/
 
 
 /*
