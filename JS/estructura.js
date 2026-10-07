@@ -275,7 +275,7 @@ async function construirEstructura() {
             1,
 
         laps:
-            1,
+            4,
 
         posiciones:
             posiciones
