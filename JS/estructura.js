@@ -348,6 +348,25 @@ construirEstructura()
         console.log("Estructura construida correctamente");
 
         return construirConfiguracion();
+        /*
+ * En este punto ya existen:
+ *
+ *     window.estructura
+ *     window.configuracion
+ *
+ * Por tanto podemos comprobar que ambas tablas son
+ * coherentes antes de continuar con el siguiente módulo.
+ */
+const resultadoValidacion =
+    validarEstructuraConfiguracion(
+        window.estructura,
+        window.configuracion
+    );
+
+console.log(
+    "Resultado de validación:",
+    resultadoValidacion
+);
     })
     .then(() => {
 
