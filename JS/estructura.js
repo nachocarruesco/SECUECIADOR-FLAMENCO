@@ -342,31 +342,25 @@ async function construirEstructura() {
 INICIAR CONSTRUCCIÓN
 ==================================================
 */
-
 construirEstructura()
+    .then(() => {
 
+        console.log("Estructura construida correctamente");
+
+        return construirConfiguracion();
+    })
     .then(() => {
 
         console.log(
-            "Estructura construida correctamente"
+            "Configuración construida correctamente"
         );
 
-        /*
-         * estructura ya existe en este momento.
-         *
-         * Por eso ahora es seguro pedir a logs.js
-         * que la muestre.
-         */
-
         mostrarDatos();
-
     })
-
     .catch(error => {
 
         console.error(
-            "Error construyendo estructura:",
+            "Error construyendo los datos:",
             error
         );
-
     });
