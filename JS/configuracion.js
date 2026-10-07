@@ -3,57 +3,82 @@
  * CONFIGURACION.JS
  * ============================================================
  *
- * RESPONSABILIDAD DE ESTE ARCHIVO
- * -------------------------------
+ * RESPONSABILIDAD
+ * ---------------
  *
- * Leer un preset de ejercicio y convertirlo en nuestra tabla
- * interna "configuracion".
+ * Construir la tabla interna "configuracion" del ejercicio
+ * completo.
  *
- * En esta primera fase trabajamos solamente con:
+ * En esta fase la secuencia del ejercicio viene determinada
+ * por:
  *
- *     rumba_abierta
- *     lap 1
+ *     ejercicio_rumba_1.json
  *
- * IMPORTANTE:
- * ------------
- * "configuracion" representa TODOS los pasos del ejercicio,
- * incluidos los silencios.
+ * que contiene:
  *
- * La estructura métrica (bpm, divisiones, acentos, etc.)
- * pertenece a "estructura" y NO se copia aquí.
+ *     3 vueltas de rumba_abierta
+ *     1 vuelta de cierre_rumba
  *
  *
- * FLUJO DE DATOS
- * --------------
+ * IMPORTANTE
+ * ----------
  *
- *     rumba_abierta.json
- *             ↓
- *       configuracion.js
- *             ↓
- *       window.configuracion
- *             ↓
- *          logs.js
- *             ↓
- *        tabla HTML
+ * "estructura" describe cómo es UNA vuelta:
  *
- * El resto de módulos utilizará posteriormente esta misma
- * tabla como entrada para el secuenciador.
+ *     - número de posiciones
+ *     - acentos métricos
+ *     - divisiones
+ *     - etc.
+ *
+ * "configuracion" describe QUÉ OCURRE en TODAS las vueltas
+ * del ejercicio.
+ *
+ *
+ * Por tanto:
+ *
+ *     estructura → descripción métrica común
+ *     configuracion → eventos concretos del ejercicio
+ *
+ *
+ * FLUJO
+ * -----
+ *
+ * ejercicio_rumba_1.json
+ *          ↓
+ *       sequence
+ *          ↓
+ *   cargar cada preset
+ *          ↓
+ * construir todas las vueltas
+ *          ↓
+ * window.configuracion
+ *
+ *
+ * FORMATO DE CADA FILA
+ * --------------------
+ *
+ *     lap
+ *     posicion
+ *     evento
+ *     tipo
+ *     intensidad
+ *     origen
+ *
+ * Ejemplo:
+ *
+ *     1 | 1 | 1 | G | H | base
+ *
+ * El campo "acento" NO aparece aquí.
+ *
+ * El acento pertenece a estructura porque describe
+ * la métrica de la posición, no el evento.
  * ============================================================
  */
 
 
 /*
  * ------------------------------------------------------------
- * 1. FUNCIÓN PRINCIPAL
- * ------------------------------------------------------------
- *
- * Lee el preset y construye un lap completo.
- *
- * Devuelve:
- *
- *     Promise<Array>
- *
- * El array resultante es la tabla "configuracion".
+ * 1. CONSTRUIR CONFIGURACIÓN
  * ------------------------------------------------------------
  */
 
@@ -61,25 +86,32 @@ async function construirConfiguracion() {
 
     /*
      * --------------------------------------------------------
-     * 1.1. Cargar el preset
+     * 1.1. Cargar la definición del ejercicio
      * --------------------------------------------------------
      *
-     * El JSON es solamente la fuente de datos.
-     * Una vez leído, trabajaremos con objetos JS en memoria.
+     * Este JSON NO contiene directamente los golpes.
+     *
+     * Contiene la secuencia que debemos ejecutar.
+     *
+     * Ejemplo:
+     *
+     *     rumba_abierta × 3
+     *     cierre_rumba  × 1
      * --------------------------------------------------------
      */
 
-    const respuesta = await fetch(
-        "presets/rumba/rumba_abierta.json"
+    const respuestaEjercicio = await fetch(
+        "config/defaults/ejercicio_rumba_1.json"
     );
 
-    if (!respuesta.ok) {
+    if (!respuestaEjercicio.ok) {
         throw new Error(
-            "No se pudo cargar presets/rumba/rumba_abierta.json"
+            "No se pudo cargar config/defaults/ejercicio_rumba_1.json"
         );
     }
 
-    const preset = await respuesta.json();
+    const ejercicio =
+        await respuestaEjercicio.json();
 
 
     /*
@@ -87,10 +119,12 @@ async function construirConfiguracion() {
      * 1.2. Comprobar que existe la estructura
      * --------------------------------------------------------
      *
-     * Necesitamos conocer cuántas posiciones tiene un lap.
+     * Necesitamos saber cuántas posiciones tiene cada vuelta.
      *
-     * En este proyecto "estructura" ya ha sido construida por
-     * estructura.js.
+     * En nuestro caso:
+     *
+     *     divisiones = 8
+     *
      * --------------------------------------------------------
      */
 
@@ -107,11 +141,13 @@ async function construirConfiguracion() {
 
     /*
      * --------------------------------------------------------
-     * 1.3. Crear la tabla vacía
+     * 1.3. Tabla final
      * --------------------------------------------------------
      *
-     * Aquí construiremos las filas que posteriormente
-     * utilizarán el secuenciador.
+     * Aquí acumularemos TODAS las filas de TODAS las vueltas.
+     *
+     * Esta será posteriormente la fuente de datos del
+     * secuenciador.
      * --------------------------------------------------------
      */
 
@@ -120,174 +156,319 @@ async function construirConfiguracion() {
 
     /*
      * --------------------------------------------------------
-     * 1.4. Recorrer todas las posiciones del lap
+     * 1.4. Contador de vueltas
      * --------------------------------------------------------
      *
-     * IMPORTANTE:
+     * "lapActual" representa el número real de vuelta dentro
+     * del ejercicio completo.
      *
-     * El preset solamente contiene los golpes.
-     *
-     * Nuestra tabla interna, en cambio, debe contener también
-     * los silencios.
-     *
-     * Por eso recorremos TODAS las posiciones de la estructura
-     * y buscamos si existe un evento en cada una.
+     * Empieza en 1.
      * --------------------------------------------------------
      */
 
-    for (
-        let posicion = 1;
-        posicion <= numeroPosiciones;
-        posicion++
-    ) {
+    let lapActual = 1;
+
+
+    /*
+     * --------------------------------------------------------
+     * 1.5. Recorrer la secuencia del ejercicio
+     * --------------------------------------------------------
+     *
+     * Por ejemplo:
+     *
+     * sequence[0]:
+     *     rumba_abierta × 3
+     *
+     * sequence[1]:
+     *     cierre_rumba × 1
+     *
+     * --------------------------------------------------------
+     */
+
+    for (const bloque of ejercicio.sequence) {
 
         /*
-         * El JSON del preset utiliza posiciones empezando
-         * desde 0.
-         *
-         * Nuestra tabla interna utiliza posiciones empezando
-         * desde 1.
-         *
-         * Por tanto:
-         *
-         *     posicion 1 → índice 0
-         *     posicion 2 → índice 1
-         *     etc.
+         * Nombre del preset que debemos cargar.
          */
-
-        const indicePreset = posicion - 1;
+        const nombreEjercicio =
+            bloque.exercise;
 
 
         /*
-         * ----------------------------------------------------
-         * Buscar eventos en esta posición
-         * ----------------------------------------------------
-         *
-         * "marks" contiene solamente las posiciones donde
-         * realmente ocurre algo.
-         *
-         * Por ejemplo, el preset de rumba abierta contiene:
-         *
-         *     0 → G
-         *     3 → G
-         *     6 → C
-         *
-         * Por eso no todas las posiciones existen en "marks".
-         * ----------------------------------------------------
+         * Número de vueltas que debe ocupar este preset.
          */
-
-        const eventos =
-            preset.marks?.[indicePreset] ?? [];
+        const numeroLaps =
+            bloque.laps;
 
 
         /*
          * ----------------------------------------------------
-         * Si NO hay eventos:
-         * crear una fila MUTE.
+         * 1.5.1. Cargar el preset correspondiente
+         * ----------------------------------------------------
+         *
+         * Todos los presets de rumba están en:
+         *
+         *     presets/rumba/
+         *
+         * y el nombre del ejercicio coincide con el nombre
+         * del archivo.
+         *
+         * Ejemplo:
+         *
+         *     rumba_abierta
+         *          ↓
+         *     rumba_abierta.json
          * ----------------------------------------------------
          */
 
-        if (eventos.length === 0) {
+        const respuestaPreset = await fetch(
+            `presets/rumba/${nombreEjercicio}.json`
+        );
 
-            configuracion.push({
 
-                lap: 1,
-
-                posicion: posicion,
-
-                evento: 1,
-
-                tipo: "MUTE",
-
-                intensidad: "-",
-
-                origen: "-"
-            });
-
-            continue;
+        if (!respuestaPreset.ok) {
+            throw new Error(
+                `No se pudo cargar el preset: ${nombreEjercicio}`
+            );
         }
 
 
+        const preset =
+            await respuestaPreset.json();
+
+
         /*
          * ----------------------------------------------------
-         * Si hay eventos:
+         * 1.5.2. Construir las vueltas de este bloque
+         * ----------------------------------------------------
          *
-         * Puede haber uno o varios eventos en la misma
-         * posición.
+         * Si:
          *
-         * Por eso NO suponemos que siempre haya uno.
+         *     numeroLaps = 3
          *
-         * Cada evento genera una fila independiente.
+         * construiremos:
+         *
+         *     lap 1
+         *     lap 2
+         *     lap 3
+         *
+         * usando el mismo preset.
          * ----------------------------------------------------
          */
 
-        eventos.forEach((evento, indiceEvento) => {
+        for (
+            let repeticion = 0;
+            repeticion < numeroLaps;
+            repeticion++
+        ) {
 
-            configuracion.push({
 
-                lap: 1,
+            /*
+             * ------------------------------------------------
+             * Recorrer TODAS las posiciones de la vuelta.
+             * ------------------------------------------------
+             *
+             * Esto es importante:
+             *
+             * El preset solo contiene las posiciones donde
+             * ocurre un evento.
+             *
+             * Nuestra tabla contiene también los silencios.
+             * ------------------------------------------------
+             */
 
-                posicion: posicion,
+            for (
+                let posicion = 1;
+                posicion <= numeroPosiciones;
+                posicion++
+            ) {
+
 
                 /*
-                 * El número de evento comienza en 1.
-                 */
-                evento: indiceEvento + 1,
-
-                /*
-                 * El tipo viene directamente del preset.
+                 * --------------------------------------------
+                 * El preset utiliza posiciones empezando en 0.
                  *
-                 * Ejemplo:
-                 *     G
-                 *     C
-                 */
-                tipo: evento.type,
-
-                /*
-                 * La intensidad también procede directamente
-                 * del preset.
+                 * Nuestra tabla utiliza posiciones empezando
+                 * en 1.
                  *
-                 * Ejemplo:
-                 *     H
-                 *     M
+                 * Por eso:
+                 *
+                 *     posición 1 → índice 0
+                 *     posición 2 → índice 1
+                 *     ...
+                 * --------------------------------------------
                  */
-                intensidad: evento.accent,
+
+                const indicePreset =
+                    posicion - 1;
+
 
                 /*
-                 * En esta primera fase todos los eventos
-                 * proceden del patrón base.
+                 * --------------------------------------------
+                 * Buscar los eventos de esta posición.
+                 *
+                 * Si no existe la posición en "marks",
+                 * obtenemos un array vacío.
+                 * --------------------------------------------
                  */
-                origen: "base"
-            });
-        });
+
+                const eventos =
+                    preset.marks?.[indicePreset] ?? [];
+
+
+                /*
+                 * --------------------------------------------
+                 * Si no hay eventos:
+                 *
+                 * creamos explícitamente una fila MUTE.
+                 *
+                 * Así configuracion contiene TODOS los pasos.
+                 * --------------------------------------------
+                 */
+
+                if (eventos.length === 0) {
+
+                    configuracion.push({
+
+                        /*
+                         * Número de vuelta dentro del ejercicio.
+                         */
+                        lap: lapActual,
+
+                        /*
+                         * Posición dentro de esa vuelta.
+                         */
+                        posicion: posicion,
+
+                        /*
+                         * El silencio ocupa un único evento.
+                         */
+                        evento: 1,
+
+                        /*
+                         * No hay sonido.
+                         */
+                        tipo: "MUTE",
+
+                        /*
+                         * No hay intensidad.
+                         */
+                        intensidad: "-",
+
+                        /*
+                         * El silencio no procede de un patrón
+                         * concreto.
+                         */
+                        origen: "-"
+                    });
+
+
+                    continue;
+                }
+
+
+                /*
+                 * --------------------------------------------
+                 * Si hay uno o varios eventos:
+                 *
+                 * cada evento genera una fila.
+                 *
+                 * El contador "evento" comienza nuevamente
+                 * en 1 para cada posición.
+                 * --------------------------------------------
+                 */
+
+                eventos.forEach(
+                    (evento, indiceEvento) => {
+
+                        configuracion.push({
+
+                            /*
+                             * Vuelta actual.
+                             */
+                            lap: lapActual,
+
+                            /*
+                             * Posición dentro de la vuelta.
+                             */
+                            posicion: posicion,
+
+                            /*
+                             * Número del evento dentro de
+                             * esta posición.
+                             *
+                             * No es un contador global.
+                             */
+                            evento: indiceEvento + 1,
+
+                            /*
+                             * Tipo de sonido del preset.
+                             */
+                            tipo: evento.type,
+
+                            /*
+                             * Marca de intensidad del audio.
+                             */
+                            intensidad: evento.accent,
+
+                            /*
+                             * Procedencia del evento.
+                             *
+                             * En este caso procede del preset
+                             * base que forma esta vuelta.
+                             *
+                             * Más adelante podremos tener,
+                             * por ejemplo:
+                             *
+                             *     base
+                             *     cierre
+                             *     usuario
+                             *     claqueta
+                             */
+                            origen:
+                                nombreEjercicio === "cierre_rumba"
+                                    ? "cierre"
+                                    : "base"
+                        });
+                    }
+                );
+            }
+
+
+            /*
+             * ------------------------------------------------
+             * Hemos terminado una vuelta completa.
+             *
+             * Pasamos a la siguiente.
+             * ------------------------------------------------
+             */
+
+            lapActual++;
+        }
     }
 
 
     /*
      * --------------------------------------------------------
-     * 1.5. Publicar el resultado
+     * 1.6. Publicar la configuración
      * --------------------------------------------------------
      *
-     * Igual que hicimos con "estructura", publicamos la tabla
-     * en window para que otros módulos puedan utilizarla.
+     * A partir de aquí otros módulos no necesitan volver a
+     * leer los JSON.
      *
-     * En el futuro:
+     * Trabajarán directamente con:
      *
-     *     secuenciador.js
-     *     programador.js
-     *     logs.js
-     *
-     * podrán acceder a ella sin volver a leer el JSON.
+     *     window.configuracion
      * --------------------------------------------------------
      */
 
-    window.configuracion = configuracion;
+    window.configuracion =
+        configuracion;
 
 
     /*
-     * Devolvemos también el array porque resulta útil para
-     * encadenar posteriormente las distintas fases de
-     * construcción.
+     * Devolvemos también la tabla para poder encadenar
+     * posteriormente esta fase con otras.
      */
 
     return configuracion;
@@ -296,17 +477,13 @@ async function construirConfiguracion() {
 
 /*
  * ============================================================
- * 2. CONSTRUIR LA CONFIGURACIÓN
+ * 2. PUBLICAR LA FUNCIÓN
  * ============================================================
  *
- * Esta llamada se ejecuta cuando el archivo se carga.
- *
- * La configuración depende de "estructura", por lo que
- * estructura.js debe haber terminado antes.
- *
- * Por eso esta función se invocará desde estructura.js,
- * después de construir estructura.
+ * estructura.js necesita poder llamar a esta función después
+ * de haber construido window.estructura.
  * ============================================================
  */
 
-window.construirConfiguracion = construirConfiguracion;
+window.construirConfiguracion =
+    construirConfiguracion;
