@@ -38,61 +38,39 @@
  * ============================================================
  */
 
-const estructura = {
+function mostrarEstructura() {
 
-    bpm: 100,
+    if (!window.estructura) {
 
-    divisiones: 8,
+        console.warn(
+            "Todavía no existe window.estructura"
+        );
 
-    compases: 1,
+        return;
 
-    laps: 4,
+    }
 
-    posiciones: [
+    mostrarTabla(
+        [
+            {
+                bpm: window.estructura.bpm,
+                divisiones: window.estructura.divisiones,
+                compases: window.estructura.compases,
+                laps: window.estructura.laps
+            }
+        ],
+        logs,
+        "Estructura general"
+    );
 
-        {
-            posicion: 1,
-            acento: "1"
-        },
 
-        {
-            posicion: 2,
-            acento: "-"
-        },
+    mostrarTabla(
+        window.estructura.posiciones,
+        logs,
+        "Posiciones de la estructura"
+    );
 
-        {
-            posicion: 3,
-            acento: "-"
-        },
-
-        {
-            posicion: 4,
-            acento: "-"
-        },
-
-        {
-            posicion: 5,
-            acento: "3"
-        },
-
-        {
-            posicion: 6,
-            acento: "-"
-        },
-
-        {
-            posicion: 7,
-            acento: "-"
-        },
-
-        {
-            posicion: 8,
-            acento: "-"
-        }
-
-    ]
-
-};
+}
 
 
 /*
