@@ -419,71 +419,130 @@ if (!contenedorLogs) {
 
 /*
  * ============================================================
- * MOSTRAR ESTRUCTURA
+ * MOSTRAR DATOS
  * ============================================================
  *
- * Primera tabla:
+ * Esta función se ejecuta DESPUÉS de que estructura.js
+ * haya terminado de construir window.estructura.
  *
- *     bpm
- *     divisiones
- *     compases
- *     laps
+ * Por tanto, aquí ya podemos utilizar:
+ *
+ *     window.estructura
+ *
  * ============================================================
  */
 
-mostrarTabla(
-
-    [
-        {
-            bpm: estructura.bpm,
-            divisiones: estructura.divisiones,
-            compases: estructura.compases,
-            laps: estructura.laps
-        }
-    ],
-
-    contenedorLogs,
-
-    "Estructura"
-
-);
+function mostrarDatos() {
 
 
-/*
- * ============================================================
- * MOSTRAR POSICIONES Y ACENTOS
- * ============================================================
- *
- * Esto sigue formando parte de "estructura".
- *
- * Simplemente lo mostramos en otra tabla para poder
- * inspeccionarlo mejor durante el desarrollo.
- * ============================================================
- */
+    /*
+     * ========================================================
+     * COMPROBAR ESTRUCTURA
+     * ========================================================
+     *
+     * Si por algún motivo todavía no existe, no intentamos
+     * acceder a sus propiedades.
+     * ========================================================
+     */
 
-mostrarTabla(
+    if (!window.estructura) {
 
-    estructura.posiciones,
+        console.warn(
+            "No existe window.estructura"
+        );
 
-    contenedorLogs,
+        return;
 
-    "Posiciones de la estructura"
-
-);
+    }
 
 
-/*
- * ============================================================
- * MOSTRAR CONFIGURACIÓN
- * ============================================================
- */
+    /*
+     * ========================================================
+     * ESTRUCTURA GENERAL
+     * ========================================================
+     *
+     * Mostramos únicamente los datos generales.
+     *
+     * ENTRADA:
+     *
+     *     window.estructura
+     *
+     * SALIDA:
+     *
+     *     tabla HTML
+     * ========================================================
+     */
 
-mostrarTabla(
+    mostrarTabla(
 
-    configuracion,
+        [
+            {
+                bpm:
+                    window.estructura.bpm,
 
-    contenedorLogs,
+                divisiones:
+                    window.estructura.divisiones,
 
-    "Configuración"
+                compases:
+                    window.estructura.compases,
 
-);
+                laps:
+                    window.estructura.laps
+            }
+        ],
+
+        contenedorLogs,
+
+        "Estructura"
+
+    );
+
+
+    /*
+     * ========================================================
+     * POSICIONES
+     * ========================================================
+     *
+     * Las posiciones forman parte de estructura.
+     *
+     * Aquí podremos comprobar que los acentos procedentes
+     * de compas.json han llegado correctamente.
+     * ========================================================
+     */
+
+    mostrarTabla(
+
+        window.estructura.posiciones,
+
+        contenedorLogs,
+
+        "Posiciones de la estructura"
+
+    );
+
+
+    /*
+     * ========================================================
+     * CONFIGURACIÓN
+     * ========================================================
+     *
+     * Esta configuración sigue siendo temporal.
+     *
+     * Todavía NO procede de un constructor.
+     *
+     * La mantendremos así hasta que construyamos
+     * configuracion en el siguiente paso.
+     * ========================================================
+     */
+
+    mostrarTabla(
+
+        configuracion,
+
+        contenedorLogs,
+
+        "Configuración"
+
+    );
+
+}
