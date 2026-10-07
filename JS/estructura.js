@@ -351,6 +351,15 @@ construirEstructura()
             "Estructura construida correctamente"
         );
 
+        /*
+         * estructura ya existe en este momento.
+         *
+         * Por eso ahora es seguro pedir a logs.js
+         * que la muestre.
+         */
+
+        mostrarDatos();
+
     })
 
     .catch(error => {
