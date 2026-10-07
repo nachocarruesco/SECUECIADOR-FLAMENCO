@@ -38,6 +38,7 @@
  * ============================================================
  */
 
+/*
 function mostrarEstructura() {
 
     if (!window.estructura) {
@@ -71,6 +72,8 @@ function mostrarEstructura() {
     );
 
 }
+
+*/
 
 
 /*
