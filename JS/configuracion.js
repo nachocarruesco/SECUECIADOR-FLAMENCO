@@ -101,12 +101,12 @@ async function construirConfiguracion() {
      */
 
     const respuestaEjercicio = await fetch(
-        "config/defaults/ejercicio_rumba_1.json"
+        "presets/rumba/ejercicio_rumba_1.json"
     );
 
     if (!respuestaEjercicio.ok) {
         throw new Error(
-            "No se pudo cargar config/defaults/ejercicio_rumba_1.json"
+            "No se pudo cargar presets/rumba/ejercicio_rumba_1.json"
         );
     }
 
