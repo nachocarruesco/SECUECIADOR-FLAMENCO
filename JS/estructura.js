@@ -246,179 +246,187 @@ async function construirEstructura() {
     }
 
 
-    /*
-    ------------------------------------------------
-    5. CONSTRUIR LA ESTRUCTURA COMPLETA
-    ------------------------------------------------
-
-    "laps" todavía no procede del ejercicio.
-
-    Lo ponemos provisionalmente en 1 porque en esta
-    fase estamos construyendo únicamente la estructura
-    métrica.
-
-    Cuando construyamos el ejercicio completo,
-    "laps" será determinado por la configuración
-    completa del ejercicio.
-
-    ------------------------------------------------
-    */
-
-    const estructura = {
-
-        bpm: 100,
-
-        divisiones:
-            compas.subdivisiones,
-
-        compases:
-            1,
-
-        laps:
-            4,
-
-        posiciones:
-            posiciones
-
-    };
-
-
-    /*
-    ------------------------------------------------
-    6. PUBLICAR EL RESULTADO
-    ------------------------------------------------
-
-    window.estructura hace que el resultado quede
-    disponible para los demás módulos.
-
-    Por tanto:
-
-        estructura.js
-             ↓
-        window.estructura
-             ↓
-        logs.js
-
-    Más adelante:
-
-        window.estructura
-             ↓
-        secuenciador
-             ↓
-        programador
-             ↓
-        disparador
-
-    ------------------------------------------------
-    */
-
-    window.estructura =
-        estructura;
-
-
-    /*
-    ------------------------------------------------
-    7. DEVOLVER TAMBIÉN EL RESULTADO
-    ------------------------------------------------
-
-    Esto permite que otro código pueda hacer:
-
-        const estructura =
-            await construirEstructura();
-
-    aunque el programa también la haya publicado
-    en window.estructura.
-
-    ------------------------------------------------
-    */
-
-    return estructura;
-
-}
-
-
-/*
+   /*
 ==================================================
-INICIAR CONSTRUCCIÓN
+INICIAR CONSTRUCCIÓN DE LOS DATOS
+==================================================
+
+El orden es IMPORTANTE.
+
+Tenemos una cadena de construcción:
+
+    1. estructura
+           ↓
+    2. configuración
+           ↓
+    3. validación
+           ↓
+    4. secuencia
+
+Cada fase espera a que la anterior haya terminado.
+
+Esto es especialmente importante porque estructura.js
+utiliza fetch(), que es asíncrono.
 ==================================================
 */
+
+
 construirEstructura()
+
+    /*
+    ------------------------------------------------
+    FASE 1
+    ------------------------------------------------
+
+    construirEstructura() termina cuando:
+
+        window.estructura
+
+    ya existe y está completamente construida.
+    ------------------------------------------------
+    */
+
     .then(() => {
 
-        console.log("Estructura construida correctamente");
+        console.log(
+            "Estructura construida correctamente"
+        );
+
+
+        /*
+        ------------------------------------------------
+        FASE 2
+        ------------------------------------------------
+
+        Ahora que estructura ya existe, podemos
+        construir la configuración completa.
+
+        configuracion.js utilizará:
+
+            window.estructura
+        ------------------------------------------------
+        */
 
         return construirConfiguracion();
-        /*
- * En este punto ya existen:
- *
- *     window.estructura
- *     window.configuracion
- *
- * Por tanto podemos comprobar que ambas tablas son
- * coherentes antes de continuar con el siguiente módulo.
- */
-const resultadoValidacion =
-    validarEstructuraConfiguracion(
-        window.estructura,
-        window.configuracion
-    );
 
-console.log(
-    "Resultado de validación:",
-    resultadoValidacion
-);
     })
+
+
+    /*
+    ------------------------------------------------
+    FASE 3
+    ------------------------------------------------
+
+    construirConfiguracion() ya ha terminado.
+
+    Ahora existen:
+
+        window.estructura
+        window.configuracion
+
+    y podemos validar ambas.
+    ------------------------------------------------
+    */
+
     .then(() => {
 
         console.log(
             "Configuración construida correctamente"
         );
 
+
+        const resultadoValidacion =
+            validarEstructuraConfiguracion(
+                window.estructura,
+                window.configuracion
+            );
+
+
+        console.log(
+            "Resultado de validación:",
+            resultadoValidacion
+        );
+
+
+        /*
+        ------------------------------------------------
+        Si la validación falla, detenemos el proceso.
+        ------------------------------------------------
+        */
+
+        if (!resultadoValidacion.valido) {
+
+            throw new Error(
+                "La validación de estructura y " +
+                "configuración ha fallado."
+            );
+        }
+
+
+        /*
+        ------------------------------------------------
+        FASE 4
+        ------------------------------------------------
+
+        Solo construimos la secuencia cuando las
+        tablas anteriores han demostrado ser coherentes.
+        ------------------------------------------------
+        */
+
+        const secuencia =
+            construirSecuencia(
+                window.estructura,
+                window.configuracion
+            );
+
+
+        /*
+        Publicamos la secuencia para los módulos
+        posteriores.
+        */
+
+        window.secuencia =
+            secuencia;
+
+
+        console.log(
+            "Secuencia construida correctamente"
+        );
+
+
+        console.log(
+            "Secuencia:",
+            window.secuencia
+        );
+
+
+        /*
+        ------------------------------------------------
+        Finalmente mostramos los datos en pantalla.
+        ------------------------------------------------
+        */
+
         mostrarDatos();
+
     })
+
+
+    /*
+    ------------------------------------------------
+    CAPTURA DE ERRORES
+    ------------------------------------------------
+
+    Cualquier error producido en cualquiera de las
+    cuatro fases termina aquí.
+    ------------------------------------------------
+    */
+
     .catch(error => {
 
         console.error(
             "Error construyendo los datos:",
             error
         );
+
     });
-/*
- * ------------------------------------------------------------
- * CONSTRUIR SECUENCIA
- * ------------------------------------------------------------
- *
- * En este punto ya tenemos:
- *
- *     window.estructura
- *     window.configuracion
- *
- * y ambas han pasado la validación.
- *
- * Ahora transformamos la configuración en una secuencia
- * lineal de eventos.
- */
-const secuencia =
-    construirSecuencia(
-        window.estructura,
-        window.configuracion
-    );
-
-
-/*
- * Publicamos la secuencia para que los siguientes módulos
- * puedan utilizarla.
- */
-window.secuencia = secuencia;
-
-
-/*
- * La mostramos provisionalmente en consola.
- *
- * Más adelante la incorporaremos a logs.js.
- */
-console.log(
-    "Secuencia construida:",
-    window.secuencia
-);
 
