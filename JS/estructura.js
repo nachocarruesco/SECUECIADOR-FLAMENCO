@@ -1,229 +1,226 @@
 /*
-==================================================
-ESTRUCTURA.JS
-
-Construye la tabla "estructura" a partir de
-config/compas.json.
-
-RESPONSABILIDAD DE ESTE ARCHIVO
--------------------------------
-
-Este archivo NO construye la configuración de
-eventos.
-
-Su única responsabilidad en esta fase es:
-
-    compas.json
-        ↓
-    estructura
-
-La estructura contiene la información métrica
-general que necesitarán posteriormente el
-secuenciador y el programador.
-
-Los eventos concretos pertenecen a "configuracion"
-y se construirán en otro paso.
-
---------------------------------------------------
-
-DATOS DE ENTRADA
---------------------------------------------------
-
-Se lee:
-
-    config/compas.json
-
-Por ahora utilizamos explícitamente:
-
-    4_4
-
-El siguiente paso podrá hacer que el constructor
-reciba dinámicamente el compás seleccionado.
-
---------------------------------------------------
-
-DATOS DE SALIDA
---------------------------------------------------
-
-Se genera:
-
-    window.estructura
-
-con esta forma:
-
-    {
-        bpm,
-        divisiones,
-        compases,
-        laps,
-        posiciones: [
-            {
-                posicion,
-                acento
-            }
-        ]
-    }
-
---------------------------------------------------
-*/
+ * ============================================================
+ * ESTRUCTURA.JS
+ * ============================================================
+ *
+ * RESPONSABILIDAD DE ESTE MÓDULO
+ * ------------------------------
+ *
+ * Construir la estructura métrica del ejercicio a partir de
+ * config/compas.json.
+ *
+ * La estructura contiene, de momento:
+ *
+ *   - bpm
+ *   - divisiones
+ *   - compases
+ *   - laps
+ *   - posiciones
+ *
+ * Cada posición contiene:
+ *
+ *   - posicion
+ *   - acento
+ *
+ * El ACENTO pertenece a la estructura métrica.
+ * No se copia dentro de cada evento de configuración.
+ *
+ *
+ * FLUJO DE DATOS
+ * --------------
+ *
+ * config/compas.json
+ *        ↓
+ * construirEstructura()
+ *        ↓
+ * window.estructura
+ *        ↓
+ * construirConfiguracion()
+ *        ↓
+ * window.configuracion
+ *        ↓
+ * validarEstructuraConfiguracion()
+ *        ↓
+ * construirSecuencia()
+ *        ↓
+ * window.secuencia
+ *        ↓
+ * mostrarDatos()
+ *
+ * IMPORTANTE
+ * ----------
+ *
+ * Las funciones construirConfiguracion(),
+ * validarEstructuraConfiguracion() y construirSecuencia()
+ * están definidas en otros archivos JS.
+ *
+ * Este archivo solamente coordina su ejecución.
+ *
+ * ============================================================
+ */
 
 
 /*
-==================================================
-CONSTRUIR ESTRUCTURA
-==================================================
-*/
+ * ============================================================
+ * FUNCIÓN: construirEstructura
+ * ============================================================
+ *
+ * Lee config/compas.json y construye la estructura métrica
+ * interna que utilizará el resto del sistema.
+ *
+ * DEVUELVE
+ * --------
+ *
+ * Una Promise que resuelve con el objeto estructura.
+ *
+ * EFECTO COLATERAL
+ * ----------------
+ *
+ * También publica el resultado en:
+ *
+ *     window.estructura
+ *
+ * para que los demás módulos puedan acceder a él.
+ *
+ * ============================================================
+ */
 
 async function construirEstructura() {
 
     /*
-    ------------------------------------------------
-    1. LEER EL ARCHIVO JSON
-    ------------------------------------------------
-
-    fetch() obtiene el archivo desde el servidor.
-
-    response.json() convierte el texto JSON en
-    un objeto JavaScript que podemos consultar.
-
-    ------------------------------------------------
-    */
+     * --------------------------------------------------------
+     * 1. Cargar el archivo de definición de compases
+     * --------------------------------------------------------
+     */
 
     const respuesta = await fetch(
         "config/compas.json"
     );
 
-
-    /*
-    ------------------------------------------------
-    Comprobamos que el servidor ha respondido
-    correctamente.
-    ------------------------------------------------
-    */
-
     if (!respuesta.ok) {
-
         throw new Error(
             "No se pudo cargar config/compas.json"
         );
-
     }
 
 
     /*
-    ------------------------------------------------
-    2. CONVERTIR JSON → OBJETO JAVASCRIPT
-    ------------------------------------------------
-    */
+     * Convertimos la respuesta HTTP en un objeto JavaScript.
+     */
 
     const compases = await respuesta.json();
 
 
     /*
-    ------------------------------------------------
-    3. SELECCIONAR EL COMPÁS
-    ------------------------------------------------
+     * --------------------------------------------------------
+     * 2. Seleccionar el compás que vamos a utilizar
+     * --------------------------------------------------------
+     *
+     * De momento trabajamos con 4/4.
+     *
+     * Más adelante esta selección podrá venir de la familia,
+     * del ejercicio o de la configuración del usuario.
+     * --------------------------------------------------------
+     */
 
-    De momento trabajamos con 4/4.
+    const nombreCompas = "4_4";
 
-    Más adelante este valor NO estará escrito aquí,
-    sino que vendrá de la selección del usuario /
-    familia / ejercicio.
-
-    ------------------------------------------------
-    */
-
-    const compas = compases["4_4"];
+    const compas = compases[nombreCompas];
 
 
     /*
-    ------------------------------------------------
-    Comprobación de seguridad.
-    ------------------------------------------------
-    */
+     * Comprobamos que el compás exista.
+     */
 
     if (!compas) {
-
         throw new Error(
-            "El compás 4_4 no existe en compas.json"
+            `No existe el compás "${nombreCompas}" en compas.json`
         );
-
     }
 
 
     /*
-    ------------------------------------------------
-    4. CREAR LAS POSICIONES
-    ------------------------------------------------
+     * --------------------------------------------------------
+     * 3. Construir la estructura general
+     * --------------------------------------------------------
+     *
+     * Estos datos describen la estructura completa del ejercicio.
+     *
+     * De momento utilizamos valores provisionales:
+     *
+     *   bpm      → 100
+     *   compases → 1
+     *   laps     → 4
+     *
+     * Posteriormente estos valores podrán proceder de la
+     * configuración real del ejercicio.
+     * --------------------------------------------------------
+     */
 
-    compas.json utiliza índices empezando en 0:
+    const estructura = {
 
-        0 1 2 3 4 5 6 7
+        bpm: 100,
 
-    Nuestra estructura utiliza posiciones
-    musicales empezando en 1:
+        divisiones: compas.subdivisiones,
 
-        1 2 3 4 5 6 7 8
+        compases: 1,
 
-    Por eso sumamos 1.
+        laps: 4,
 
-    El acento se obtiene de las etiquetas
-    métricas del compás.
+        posiciones: []
 
-    Por ejemplo:
+    };
 
-        step 0 → etiqueta "1"
-        step 4 → etiqueta "3"
 
-    Las demás posiciones quedan sin etiqueta.
-
-    IMPORTANTE:
-
-    Aquí NO estamos hablando todavía de intensidad
-    sonora.
-
-    "acento" describe la posición métrica.
-
-    ------------------------------------------------
-    */
-
-    const posiciones = [];
-
+    /*
+     * --------------------------------------------------------
+     * 4. Construir las posiciones de la estructura
+     * --------------------------------------------------------
+     *
+     * compas.json utiliza posiciones empezando en 0:
+     *
+     *   step 0 → posición 1
+     *   step 2 → posición 2
+     *   step 4 → posición 3
+     *   step 6 → posición 4
+     *
+     * Nuestra tabla interna utiliza posiciones humanas,
+     * empezando en 1.
+     *
+     * Por tanto:
+     *
+     *   posición interna = step + 1
+     *
+     * Los pasos que no tienen etiqueta de acento reciben "-".
+     * --------------------------------------------------------
+     */
 
     for (
-        let step = 0;
-        step < compas.subdivisiones;
-        step++
+        let posicion = 1;
+        posicion <= compas.subdivisiones;
+        posicion++
     ) {
 
         /*
-        Buscamos si existe una etiqueta para
-        esta subdivisión.
-        */
+         * La posición interna empieza en 1.
+         *
+         * Buscamos si compas.json tiene una etiqueta asociada
+         * a esta posición.
+         */
+
+        const step = posicion - 1;
 
         const etiqueta =
             compas.etiquetas_default.find(
-                item =>
-                    item.step === step
+                item => item.step === step
             );
 
 
         /*
-        Si existe etiqueta:
-
-            "1"
-            "2"
-            "3"
-            "4"
-
-        usamos ese valor.
-
-        Si no existe:
-
-            "-"
-
-        ------------------------------------------------
-        */
+         * Si existe etiqueta, utilizamos su texto.
+         *
+         * Si no existe, la posición no tiene acento estructural.
+         */
 
         const acento =
             etiqueta
@@ -232,12 +229,12 @@ async function construirEstructura() {
 
 
         /*
-        Creamos la fila de estructura.
-        */
+         * Añadimos la posición a la estructura.
+         */
 
-        posiciones.push({
+        estructura.posiciones.push({
 
-            posicion: step + 1,
+            posicion: posicion,
 
             acento: acento
 
@@ -246,45 +243,96 @@ async function construirEstructura() {
     }
 
 
-   /*
-==================================================
-INICIAR CONSTRUCCIÓN DE LOS DATOS
-==================================================
+    /*
+     * --------------------------------------------------------
+     * 5. Publicar la estructura
+     * --------------------------------------------------------
+     *
+     * window.estructura será la referencia compartida que
+     * utilizarán configuración, validación, secuenciador,
+     * logs, etc.
+     * --------------------------------------------------------
+     */
 
-El orden es IMPORTANTE.
+    window.estructura = estructura;
 
-Tenemos una cadena de construcción:
 
-    1. estructura
-           ↓
-    2. configuración
-           ↓
-    3. validación
-           ↓
-    4. secuencia
+    /*
+     * --------------------------------------------------------
+     * 6. Devolver la estructura
+     * --------------------------------------------------------
+     *
+     * Esto permite que la Promise de construirEstructura()
+     * continúe hacia el siguiente .then().
+     * --------------------------------------------------------
+     */
 
-Cada fase espera a que la anterior haya terminado.
+    return estructura;
+}
 
-Esto es especialmente importante porque estructura.js
-utiliza fetch(), que es asíncrono.
-==================================================
-*/
 
+/*
+ * ============================================================
+ * PUBLICAR LA FUNCIÓN
+ * ============================================================
+ *
+ * Otros módulos pueden utilizar:
+ *
+ *     construirEstructura()
+ *
+ * y, si lo necesitan, también:
+ *
+ *     window.construirEstructura()
+ *
+ * ============================================================
+ */
+
+window.construirEstructura = construirEstructura;
+
+
+/*
+ * ============================================================
+ * FLUJO PRINCIPAL DE CONSTRUCCIÓN
+ * ============================================================
+ *
+ * MUY IMPORTANTE:
+ *
+ * Este bloque controla el orden de construcción.
+ *
+ * No debemos llamar a construirSecuencia() fuera de esta
+ * cadena, porque estructura y configuración se construyen
+ * mediante operaciones asíncronas.
+ *
+ * El orden obligatorio es:
+ *
+ *     1. estructura
+ *     2. configuración
+ *     3. validación
+ *     4. secuencia
+ *     5. logs
+ *
+ * Cada .then() empieza solamente cuando ha terminado
+ * correctamente el paso anterior.
+ *
+ * ============================================================
+ */
 
 construirEstructura()
 
     /*
-    ------------------------------------------------
-    FASE 1
-    ------------------------------------------------
-
-    construirEstructura() termina cuando:
-
-        window.estructura
-
-    ya existe y está completamente construida.
-    ------------------------------------------------
-    */
+     * --------------------------------------------------------
+     * PASO 1
+     * --------------------------------------------------------
+     *
+     * construirEstructura() ya ha terminado.
+     *
+     * En este momento:
+     *
+     *     window.estructura
+     *
+     * existe y está disponible.
+     * --------------------------------------------------------
+     */
 
     .then(() => {
 
@@ -294,18 +342,8 @@ construirEstructura()
 
 
         /*
-        ------------------------------------------------
-        FASE 2
-        ------------------------------------------------
-
-        Ahora que estructura ya existe, podemos
-        construir la configuración completa.
-
-        configuracion.js utilizará:
-
-            window.estructura
-        ------------------------------------------------
-        */
+         * Pasamos ahora a construir la configuración.
+         */
 
         return construirConfiguracion();
 
@@ -313,20 +351,18 @@ construirEstructura()
 
 
     /*
-    ------------------------------------------------
-    FASE 3
-    ------------------------------------------------
-
-    construirConfiguracion() ya ha terminado.
-
-    Ahora existen:
-
-        window.estructura
-        window.configuracion
-
-    y podemos validar ambas.
-    ------------------------------------------------
-    */
+     * --------------------------------------------------------
+     * PASO 2
+     * --------------------------------------------------------
+     *
+     * construirConfiguracion() ya ha terminado.
+     *
+     * En este momento deberían existir:
+     *
+     *     window.estructura
+     *     window.configuracion
+     * --------------------------------------------------------
+     */
 
     .then(() => {
 
@@ -334,6 +370,20 @@ construirEstructura()
             "Configuración construida correctamente"
         );
 
+
+        /*
+         * ----------------------------------------------------
+         * PASO 3
+         * ----------------------------------------------------
+         *
+         * Validamos que estructura y configuración sean
+         * compatibles.
+         *
+         * La función de validación está definida en:
+         *
+         *     JS/validacion.js
+         * ----------------------------------------------------
+         */
 
         const resultadoValidacion =
             validarEstructuraConfiguracion(
@@ -349,29 +399,40 @@ construirEstructura()
 
 
         /*
-        ------------------------------------------------
-        Si la validación falla, detenemos el proceso.
-        ------------------------------------------------
-        */
+         * Si la validación falla, detenemos el proceso.
+         *
+         * No tiene sentido construir una secuencia a partir
+         * de datos que ya sabemos que son inconsistentes.
+         */
 
         if (!resultadoValidacion.valido) {
 
             throw new Error(
-                "La validación de estructura y " +
-                "configuración ha fallado."
+                "La validación de estructura y configuración ha fallado."
             );
+
         }
 
 
         /*
-        ------------------------------------------------
-        FASE 4
-        ------------------------------------------------
-
-        Solo construimos la secuencia cuando las
-        tablas anteriores han demostrado ser coherentes.
-        ------------------------------------------------
-        */
+         * ----------------------------------------------------
+         * PASO 4
+         * ----------------------------------------------------
+         *
+         * Construimos la secuencia.
+         *
+         * IMPORTANTE:
+         *
+         * Llegamos aquí solamente después de haber terminado:
+         *
+         *     estructura
+         *     configuración
+         *     validación
+         *
+         * Por tanto, construirSecuencia() ya puede recibir
+         * window.estructura y window.configuracion.
+         * ----------------------------------------------------
+         */
 
         const secuencia =
             construirSecuencia(
@@ -381,12 +442,11 @@ construirEstructura()
 
 
         /*
-        Publicamos la secuencia para los módulos
-        posteriores.
-        */
+         * Publicamos la secuencia para que otros módulos
+         * puedan utilizarla.
+         */
 
-        window.secuencia =
-            secuencia;
+        window.secuencia = secuencia;
 
 
         console.log(
@@ -401,10 +461,16 @@ construirEstructura()
 
 
         /*
-        ------------------------------------------------
-        Finalmente mostramos los datos en pantalla.
-        ------------------------------------------------
-        */
+         * ----------------------------------------------------
+         * PASO 5
+         * ----------------------------------------------------
+         *
+         * Una vez que todos los datos están construidos,
+         * mostramos las tablas de diagnóstico.
+         *
+         * logs.js se limita a representar los datos.
+         * ----------------------------------------------------
+         */
 
         mostrarDatos();
 
@@ -412,14 +478,14 @@ construirEstructura()
 
 
     /*
-    ------------------------------------------------
-    CAPTURA DE ERRORES
-    ------------------------------------------------
-
-    Cualquier error producido en cualquiera de las
-    cuatro fases termina aquí.
-    ------------------------------------------------
-    */
+     * --------------------------------------------------------
+     * MANEJO CENTRALIZADO DE ERRORES
+     * --------------------------------------------------------
+     *
+     * Cualquier error producido en cualquiera de los pasos
+     * anteriores termina aquí.
+     * --------------------------------------------------------
+     */
 
     .catch(error => {
 
@@ -429,4 +495,3 @@ construirEstructura()
         );
 
     });
-
