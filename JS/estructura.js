@@ -383,3 +383,42 @@ console.log(
             error
         );
     });
+/*
+ * ------------------------------------------------------------
+ * CONSTRUIR SECUENCIA
+ * ------------------------------------------------------------
+ *
+ * En este punto ya tenemos:
+ *
+ *     window.estructura
+ *     window.configuracion
+ *
+ * y ambas han pasado la validación.
+ *
+ * Ahora transformamos la configuración en una secuencia
+ * lineal de eventos.
+ */
+const secuencia =
+    construirSecuencia(
+        window.estructura,
+        window.configuracion
+    );
+
+
+/*
+ * Publicamos la secuencia para que los siguientes módulos
+ * puedan utilizarla.
+ */
+window.secuencia = secuencia;
+
+
+/*
+ * La mostramos provisionalmente en consola.
+ *
+ * Más adelante la incorporaremos a logs.js.
+ */
+console.log(
+    "Secuencia construida:",
+    window.secuencia
+);
+
