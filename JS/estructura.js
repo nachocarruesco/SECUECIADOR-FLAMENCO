@@ -1,136 +1,55 @@
 /*
  * ============================================================
- * ESTRUCTURA.JS
+ * ESTRUCTURA.JS — construcción de estructura y patrón métrico
  * ============================================================
  *
- * RESPONSABILIDAD DE ESTE MÓDULO
- * ------------------------------
+ * TABLA 1 — window.tablaEstructura
+ * bpm | divisiones | compases | laps | claqueta_si_no | origen
  *
- * Construir la estructura métrica del ejercicio a partir de
- * config/compas.json.
+ * TABLA 2 — window.posicionesEstructura
+ * posicion | acento | claqueta
  *
- * La estructura contiene, de momento:
- *
- *   - bpm
- *   - divisiones
- *   - compases
- *   - laps
- *   - posiciones
- *
- * Cada posición contiene:
- *
- *   - posicion
- *   - acento
- *
- * El ACENTO pertenece a la estructura métrica.
- * No se copia dentro de cada evento de configuración.
- *
- *
- * FLUJO DE DATOS
- * --------------
- *
- * config/compas.json
- *        ↓
- * construirEstructura()
- *        ↓
- * window.estructura
- *        ↓
- * construirConfiguracion()
- *        ↓
- * window.configuracion
- *        ↓
- * validarEstructuraConfiguracion()
- *        ↓
- * construirSecuencia()
- *        ↓
- * window.secuencia
- *        ↓
- * mostrarDatos()
- *
- * IMPORTANTE
- * ----------
- *
- * Las funciones construirConfiguracion(),
- * validarEstructuraConfiguracion() y construirSecuencia()
- * están definidas en otros archivos JS.
- *
- * Este archivo solamente coordina su ejecución.
- *
- * ============================================================
- */
-
-
-/*
- * ============================================================
- * FUNCIÓN: construirEstructura
- * ============================================================
- *
- * Lee config/compas.json y construye la estructura métrica
- * interna que utilizará el resto del sistema.
- *
- * DEVUELVE
- * --------
- *
- * Una Promise que resuelve con el objeto estructura.
- *
- * EFECTO COLATERAL
- * ----------------
- *
- * También publica el resultado en:
- *
- *     window.estructura
- *
- * para que los demás módulos puedan acceder a él.
- *
+ * window.estructura se mantiene como objeto de compatibilidad
+ * para no romper los módulos que ya consumen estos datos.
  * ============================================================
  */
 
 async function construirEstructura() {
 
-    /*
-     * --------------------------------------------------------
-     * 1. Cargar el archivo de definición de compases
-     * --------------------------------------------------------
-     */
+    // Cargamos las tres fuentes de datos en paralelo.
+    const [
+        respuestaCompases,
+        respuestaDefaults,
+        respuestaClaqueta
+    ] = await Promise.all([
+        fetch("config/compas.json"),
+        fetch("config/defaults/default_rumbas.json"),
+        fetch("presets/rumba/claqueta.json")
+    ]);
 
-    const respuesta = await fetch(
-        "config/compas.json"
-    );
+    if (!respuestaCompases.ok) {
+        throw new Error("No se pudo cargar config/compas.json");
+    }
 
-    if (!respuesta.ok) {
+    if (!respuestaDefaults.ok) {
         throw new Error(
-            "No se pudo cargar config/compas.json"
+            "No se pudo cargar config/defaults/default_rumbas.json"
         );
     }
 
+    if (!respuestaClaqueta.ok) {
+        throw new Error(
+            "No se pudo cargar presets/rumba/claqueta.json"
+        );
+    }
 
-    /*
-     * Convertimos la respuesta HTTP en un objeto JavaScript.
-     */
+    const definicionesCompas = await respuestaCompases.json();
+    const defaults = await respuestaDefaults.json();
+    const patronClaqueta = await respuestaClaqueta.json();
 
-    const compases = await respuesta.json();
-
-
-    /*
-     * --------------------------------------------------------
-     * 2. Seleccionar el compás que vamos a utilizar
-     * --------------------------------------------------------
-     *
-     * De momento trabajamos con 4/4.
-     *
-     * Más adelante esta selección podrá venir de la familia,
-     * del ejercicio o de la configuración del usuario.
-     * --------------------------------------------------------
-     */
-
+    // En esta fase seguimos trabajando con 4/4.
     const nombreCompas = "4_4";
-
-    const compas = compases[nombreCompas];
-
-
-    /*
-     * Comprobamos que el compás exista.
-     */
+    const compas = definicionesCompas[nombreCompas];
 
     if (!compas) {
         throw new Error(
@@ -138,252 +57,127 @@ async function construirEstructura() {
         );
     }
 
+    // Valores generales. BPM y estado de claqueta proceden
+    // del archivo de valores predeterminados existente.
+    const bpm = Number(defaults.bpm?.default ?? 100);
+    const divisiones = Number(compas.subdivisiones);
+    const compases = 1;
+    const laps = 4;
+    const claquetaSiNo = Boolean(
+        defaults.claqueta?.enabled ?? true
+    );
 
     /*
-     * --------------------------------------------------------
-     * 3. Construir la estructura general
-     * --------------------------------------------------------
+     * TABLA 1: estructura general.
      *
-     * Estos datos describen la estructura completa del ejercicio.
-     *
-     * De momento utilizamos valores provisionales:
-     *
-     *   bpm      → 100
-     *   compases → 1
-     *   laps     → 4
-     *
-     * Posteriormente estos valores podrán proceder de la
-     * configuración real del ejercicio.
-     * --------------------------------------------------------
+     * Indicamos el archivo real de procedencia. Todavía no
+     * atribuimos estos valores a preset, ejercicio o usuario.
      */
-
-    const estructura = {
-
-        bpm: 100,
-
-        divisiones: compas.subdivisiones,
-
-        compases: 1,
-
-        laps: 4,
-
-        posiciones: []
-
-    };
-
+    const tablaEstructura = [{
+        bpm,
+        divisiones,
+        compases,
+        laps,
+        claqueta_si_no: claquetaSiNo ? "ON" : "OFF",
+        origen: "config/defaults/default_rumbas.json"
+    }];
 
     /*
-     * --------------------------------------------------------
-     * 4. Construir las posiciones de la estructura
-     * --------------------------------------------------------
+     * TABLA 2: posiciones de la estructura.
      *
-     * compas.json utiliza posiciones empezando en 0:
+     * Los JSON numeran las posiciones desde cero.
+     * Nuestra tabla las numera desde uno.
      *
-     *   step 0 → posición 1
-     *   step 2 → posición 2
-     *   step 4 → posición 3
-     *   step 6 → posición 4
+     * Por eso, para cada posición, el índice JSON es:
+     * posicion - 1
      *
-     * Nuestra tabla interna utiliza posiciones humanas,
-     * empezando en 1.
-     *
-     * Por tanto:
-     *
-     *   posición interna = step + 1
-     *
-     * Los pasos que no tienen etiqueta de acento reciben "-".
-     * --------------------------------------------------------
+     * El patrón de claqueta se conserva aunque esté desactivada.
+     * El interruptor ON/OFF no elimina los datos del patrón.
      */
+    const posicionesEstructura = [];
 
     for (
         let posicion = 1;
-        posicion <= compas.subdivisiones;
+        posicion <= divisiones;
         posicion++
     ) {
-
-        /*
-         * La posición interna empieza en 1.
-         *
-         * Buscamos si compas.json tiene una etiqueta asociada
-         * a esta posición.
-         */
-
         const step = posicion - 1;
 
-        const etiqueta =
-            compas.etiquetas_default.find(
-                item => item.step === step
-            );
+        const etiqueta = (compas.etiquetas_default || [])
+            .find(item => item.step === step);
 
+        const eventosClaqueta =
+            patronClaqueta[String(step)] || [];
 
-        /*
-         * Si existe etiqueta, utilizamos su texto.
-         *
-         * Si no existe, la posición no tiene acento estructural.
-         */
+        const claqueta = eventosClaqueta.length
+            ? eventosClaqueta
+                .map(evento => `${evento.type}:${evento.accent}`)
+                .join(", ")
+            : "—";
 
-        const acento =
-            etiqueta
-                ? etiqueta.texto
-                : "-";
-
-
-        /*
-         * Añadimos la posición a la estructura.
-         */
-
-        estructura.posiciones.push({
-
-            posicion: posicion,
-
-            acento: acento
-
+        posicionesEstructura.push({
+            posicion,
+            acento: etiqueta ? etiqueta.texto : "—",
+            claqueta
         });
-
     }
 
+    // Publicamos las dos tablas para logs.js y otros módulos.
+    window.tablaEstructura = tablaEstructura;
+    window.posicionesEstructura = posicionesEstructura;
 
     /*
-     * --------------------------------------------------------
-     * 5. Publicar la estructura
-     * --------------------------------------------------------
+     * Objeto efectivo de compatibilidad.
      *
-     * window.estructura será la referencia compartida que
-     * utilizarán configuración, validación, secuenciador,
-     * logs, etc.
-     * --------------------------------------------------------
+     * Los módulos existentes siguen leyendo:
+     * window.estructura.bpm
+     * window.estructura.divisiones
+     * window.estructura.laps
+     * window.estructura.posiciones
+     *
+     * posiciones apunta a la misma tabla publicada arriba.
      */
+    const estructura = {
+        bpm,
+        divisiones,
+        compases,
+        laps,
+        claqueta_si_no: claquetaSiNo,
+        posiciones: posicionesEstructura
+    };
 
     window.estructura = estructura;
 
-
-    /*
-     * --------------------------------------------------------
-     * 6. Devolver la estructura
-     * --------------------------------------------------------
-     *
-     * Esto permite que la Promise de construirEstructura()
-     * continúe hacia el siguiente .then().
-     * --------------------------------------------------------
-     */
-
     return estructura;
 }
-
-
-/*
- * ============================================================
- * PUBLICAR LA FUNCIÓN
- * ============================================================
- *
- * Otros módulos pueden utilizar:
- *
- *     construirEstructura()
- *
- * y, si lo necesitan, también:
- *
- *     window.construirEstructura()
- *
- * ============================================================
- */
 
 window.construirEstructura = construirEstructura;
 
 
 /*
  * ============================================================
- * FLUJO PRINCIPAL DE CONSTRUCCIÓN
+ * ORQUESTACIÓN
  * ============================================================
  *
- * MUY IMPORTANTE:
- *
- * Este bloque controla el orden de construcción.
- *
- * No debemos llamar a construirSecuencia() fuera de esta
- * cadena, porque estructura y configuración se construyen
- * mediante operaciones asíncronas.
- *
- * El orden obligatorio es:
- *
- *     1. estructura
- *     2. configuración
- *     3. validación
- *     4. secuencia
- *     5. logs
- *
- * Cada .then() empieza solamente cuando ha terminado
- * correctamente el paso anterior.
- *
+ * Orden obligatorio:
+ * 1. Construir estructura.
+ * 2. Construir configuración.
+ * 3. Validar los datos.
+ * 4. Construir secuencia.
+ * 5. Mostrar tablas.
  * ============================================================
  */
 
 construirEstructura()
 
-    /*
-     * --------------------------------------------------------
-     * PASO 1
-     * --------------------------------------------------------
-     *
-     * construirEstructura() ya ha terminado.
-     *
-     * En este momento:
-     *
-     *     window.estructura
-     *
-     * existe y está disponible.
-     * --------------------------------------------------------
-     */
-
     .then(() => {
-
-        console.log(
-            "Estructura construida correctamente"
-        );
-
-
-        /*
-         * Pasamos ahora a construir la configuración.
-         */
+        console.log("Estructura construida correctamente");
 
         return construirConfiguracion();
-
     })
 
-
-    /*
-     * --------------------------------------------------------
-     * PASO 2
-     * --------------------------------------------------------
-     *
-     * construirConfiguracion() ya ha terminado.
-     *
-     * En este momento deberían existir:
-     *
-     *     window.estructura
-     *     window.configuracion
-     * --------------------------------------------------------
-     */
-
     .then(() => {
-
-        console.log(
-            "Configuración construida correctamente"
-        );
-
-
-        /*
-         * ----------------------------------------------------
-         * PASO 3
-         * ----------------------------------------------------
-         *
-         * Validamos que estructura y configuración sean
-         * compatibles.
-         *
-         * La función de validación está definida en:
-         *
-         *     JS/validacion.js
-         * ----------------------------------------------------
-         */
+        console.log("Configuración construida correctamente");
 
         const resultadoValidacion =
             validarEstructuraConfiguracion(
@@ -391,107 +185,31 @@ construirEstructura()
                 window.configuracion
             );
 
-
         console.log(
             "Resultado de validación:",
             resultadoValidacion
         );
 
-
-        /*
-         * Si la validación falla, detenemos el proceso.
-         *
-         * No tiene sentido construir una secuencia a partir
-         * de datos que ya sabemos que son inconsistentes.
-         */
-
         if (!resultadoValidacion.valido) {
-
             throw new Error(
                 "La validación de estructura y configuración ha fallado."
             );
-
         }
 
-
-        /*
-         * ----------------------------------------------------
-         * PASO 4
-         * ----------------------------------------------------
-         *
-         * Construimos la secuencia.
-         *
-         * IMPORTANTE:
-         *
-         * Llegamos aquí solamente después de haber terminado:
-         *
-         *     estructura
-         *     configuración
-         *     validación
-         *
-         * Por tanto, construirSecuencia() ya puede recibir
-         * window.estructura y window.configuracion.
-         * ----------------------------------------------------
-         */
-
-        const secuencia =
-            construirSecuencia(
-                window.estructura,
-                window.configuracion
-            );
-
-
-        /*
-         * Publicamos la secuencia para que otros módulos
-         * puedan utilizarla.
-         */
-
-        window.secuencia = secuencia;
-
-
-        console.log(
-            "Secuencia construida correctamente"
+        window.secuencia = construirSecuencia(
+            window.estructura,
+            window.configuracion
         );
 
-
-        console.log(
-            "Secuencia:",
-            window.secuencia
-        );
-
-
-        /*
-         * ----------------------------------------------------
-         * PASO 5
-         * ----------------------------------------------------
-         *
-         * Una vez que todos los datos están construidos,
-         * mostramos las tablas de diagnóstico.
-         *
-         * logs.js se limita a representar los datos.
-         * ----------------------------------------------------
-         */
+        console.log("Secuencia construida correctamente");
+        console.log("Secuencia:", window.secuencia);
 
         mostrarDatos();
-
     })
 
-
-    /*
-     * --------------------------------------------------------
-     * MANEJO CENTRALIZADO DE ERRORES
-     * --------------------------------------------------------
-     *
-     * Cualquier error producido en cualquiera de los pasos
-     * anteriores termina aquí.
-     * --------------------------------------------------------
-     */
-
     .catch(error => {
-
         console.error(
             "Error construyendo los datos:",
             error
         );
-
     });
