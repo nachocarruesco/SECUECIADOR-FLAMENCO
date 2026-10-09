@@ -1,424 +1,107 @@
 /*
  * ============================================================
- * logs.js
+ * LOGS.JS — representación HTML de las tablas internas
  * ============================================================
  *
- * Primera versión del sistema de logs.
- *
- * Su única función en esta fase es:
- *
- *     DATOS JAVASCRIPT
- *           ↓
- *      TABLA HTML
- *
- * No construye datos musicales.
- * No modifica los datos.
- * No reproduce audio.
- * No utiliza Canvas.
- *
- * Los datos que aparecen aquí son TEMPORALES y sirven
- * únicamente para comprobar que el mecanismo de visualización
- * funciona.
- *
- * Más adelante:
- *
- *     constructor.js
- *            ↓
- *     estructura / configuracion
- *            ↓
- *          logs.js
- *
- * ============================================================
- */
-
-
-/*
- * ============================================================
- * DATOS DE PRUEBA: ESTRUCTURA
- * ============================================================
- */
-
-/*
-function mostrarEstructura() {
-
-    if (!window.estructura) {
-
-        console.warn(
-            "Todavía no existe window.estructura"
-        );
-
-        return;
-
-    }
-
-    mostrarTabla(
-        [
-            {
-                bpm: window.estructura.bpm,
-                divisiones: window.estructura.divisiones,
-                compases: window.estructura.compases,
-                laps: window.estructura.laps
-            }
-        ],
-        logs,
-        "Estructura general"
-    );
-
-
-    mostrarTabla(
-        window.estructura.posiciones,
-        logs,
-        "Posiciones de la estructura"
-    );
-
-}
-
-*/
-
-
-/*
- * ============================================================
- * DATOS DE PRUEBA: CONFIGURACIÓN
- * ============================================================
- *
- * Aquí tenemos TODOS los eventos de dos laps.
- *
- * En el constructor definitivo habrá tantos laps como indique
- * la configuración del ejercicio.
- * ============================================================
- */
-
-/*
-const configuracion = [
-
-    {
-        lap: 1,
-        posicion: 1,
-        evento: 1,
-        tipo: "G",
-        intensidad: "H",
-        origen: "base"
-    },
-
-    {
-        lap: 1,
-        posicion: 2,
-        evento: 2,
-        tipo: "MUTE",
-        intensidad: "-",
-        origen: "base"
-    },
-
-    {
-        lap: 1,
-        posicion: 3,
-        evento: 3,
-        tipo: "MUTE",
-        intensidad: "-",
-        origen: "base"
-    },
-
-    {
-        lap: 1,
-        posicion: 4,
-        evento: 4,
-        tipo: "MUTE",
-        intensidad: "-",
-        origen: "base"
-    },
-
-    {
-        lap: 1,
-        posicion: 5,
-        evento: 5,
-        tipo: "G",
-        intensidad: "M",
-        origen: "base"
-    },
-
-    {
-        lap: 1,
-        posicion: 6,
-        evento: 6,
-        tipo: "MUTE",
-        intensidad: "-",
-        origen: "base"
-    },
-
-    {
-        lap: 1,
-        posicion: 7,
-        evento: 7,
-        tipo: "C",
-        intensidad: "H",
-        origen: "base"
-    },
-
-    {
-        lap: 1,
-        posicion: 8,
-        evento: 8,
-        tipo: "MUTE",
-        intensidad: "-",
-        origen: "base"
-    },
-
-    {
-        lap: 2,
-        posicion: 1,
-        evento: 9,
-        tipo: "G",
-        intensidad: "H",
-        origen: "base"
-    },
-
-    {
-        lap: 2,
-        posicion: 2,
-        evento: 10,
-        tipo: "MUTE",
-        intensidad: "-",
-        origen: "base"
-    },
-
-    {
-        lap: 2,
-        posicion: 3,
-        evento: 11,
-        tipo: "MUTE",
-        intensidad: "-",
-        origen: "base"
-    },
-
-    {
-        lap: 2,
-        posicion: 4,
-        evento: 12,
-        tipo: "MUTE",
-        intensidad: "-",
-        origen: "base"
-    },
-
-    {
-        lap: 2,
-        posicion: 5,
-        evento: 13,
-        tipo: "G",
-        intensidad: "M",
-        origen: "base"
-    },
-
-    {
-        lap: 2,
-        posicion: 6,
-        evento: 14,
-        tipo: "MUTE",
-        intensidad: "-",
-        origen: "base"
-    },
-
-    {
-        lap: 2,
-        posicion: 7,
-        evento: 15,
-        tipo: "C",
-        intensidad: "H",
-        origen: "base"
-    },
-
-    {
-        lap: 2,
-        posicion: 8,
-        evento: 16,
-        tipo: "MUTE",
-        intensidad: "-",
-        origen: "base"
-    }
-
-];
-*/
-
-
-/*
- * ============================================================
- * CREAR TABLA HTML
- * ============================================================
- *
- * ENTRADA:
- *
- *     array de objetos
- *
- * SALIDA:
- *
- *     elemento <table>
- *
- * Esta función no conoce absolutamente nada sobre flamenco.
- * Es una herramienta genérica de visualización.
+ * Este módulo no calcula ni modifica datos musicales.
+ * Recibe las tablas de los otros módulos y las representa.
  * ============================================================
  */
 
 function crearTablaHTML(datos) {
 
-    if (!Array.isArray(datos)) {
+    const tabla = document.createElement("table");
 
-        throw new TypeError(
-            "crearTablaHTML() necesita recibir un array"
-        );
+    tabla.style.borderCollapse = "collapse";
+    tabla.style.marginBottom = "24px";
+    tabla.style.width = "100%";
 
-    }
+    if (!Array.isArray(datos) || datos.length === 0) {
 
-
-    if (datos.length === 0) {
-
-        const tabla = document.createElement("table");
-
-        const fila = document.createElement("tr");
-
-        const celda = document.createElement("td");
+        const fila = tabla.insertRow();
+        const celda = fila.insertCell();
 
         celda.textContent = "Sin datos";
 
-        fila.appendChild(celda);
-
-        tabla.appendChild(fila);
-
         return tabla;
-
     }
 
-
-    const tabla = document.createElement("table");
-
-
-    /*
-     * CABECERA
-     *
-     * Las columnas salen de las propiedades del primer objeto.
-     */
-
-    const thead = document.createElement("thead");
-
-    const filaCabecera = document.createElement("tr");
-
+    // Las propiedades del primer registro determinan las columnas.
     const columnas = Object.keys(datos[0]);
 
+    const thead = tabla.createTHead();
+    const filaCabecera = thead.insertRow();
 
     columnas.forEach(columna => {
 
         const th = document.createElement("th");
 
         th.textContent = columna;
+        th.style.border = "1px solid #999";
+        th.style.padding = "5px 8px";
+        th.style.textAlign = "left";
 
         filaCabecera.appendChild(th);
-
     });
 
-
-    thead.appendChild(filaCabecera);
-
-    tabla.appendChild(thead);
-
-
-    /*
-     * CUERPO
-     */
-
-    const tbody = document.createElement("tbody");
-
+    const tbody = tabla.createTBody();
 
     datos.forEach(registro => {
 
-        const fila = document.createElement("tr");
-
+        const fila = tbody.insertRow();
 
         columnas.forEach(columna => {
 
-            const td = document.createElement("td");
+            const td = fila.insertCell();
+            const valor = registro[columna];
 
-            td.textContent = registro[columna];
+            td.textContent =
+                valor === null ||
+                valor === undefined ||
+                valor === ""
+                    ? "—"
+                    : String(valor);
 
-            fila.appendChild(td);
-
+            td.style.border = "1px solid #999";
+            td.style.padding = "5px 8px";
         });
-
-
-        tbody.appendChild(fila);
-
     });
 
-
-    tabla.appendChild(tbody);
-
-
     return tabla;
-
 }
 
 
 /*
- * ============================================================
- * MOSTRAR TABLA
- * ============================================================
+ * Añade un título y una tabla al contenedor indicado.
  */
+function mostrarTabla(datos, contenedor, titulo) {
 
-function mostrarTabla(
-    datos,
-    contenedor,
-    titulo
-) {
+    const encabezado = document.createElement("h2");
 
-    const encabezado =
-        document.createElement("h2");
+    encabezado.textContent = titulo;
 
-    encabezado.textContent =
-        titulo;
-
-
-    const tabla =
-        crearTablaHTML(datos);
-
-
-    contenedor.appendChild(
-        encabezado
-    );
-
-
-    contenedor.appendChild(
-        tabla
-    );
-
+    contenedor.appendChild(encabezado);
+    contenedor.appendChild(crearTablaHTML(datos));
 }
 
 
 /*
- * ============================================================
- * CONTENEDOR DEL LOG
- * ============================================================
- *
- * Buscamos un elemento:
- *
- *     <div id="logs"></div>
- *
- * Si todavía no existe, lo creamos.
- * ============================================================
+ * Busca el contenedor de logs.
+ * Si no existe, lo crea.
  */
+function obtenerContenedorLogs() {
 
-let contenedorLogs =
-    document.getElementById("logs");
+    let contenedor = document.getElementById("logs");
 
+    if (!contenedor) {
 
-if (!contenedorLogs) {
+        contenedor = document.createElement("div");
+        contenedor.id = "logs";
 
-    contenedorLogs =
-        document.createElement("div");
+        document.body.appendChild(contenedor);
+    }
 
-    contenedorLogs.id =
-        "logs";
-
-    document.body.appendChild(
-        contenedorLogs
-    );
-
+    return contenedor;
 }
 
 
@@ -427,127 +110,51 @@ if (!contenedorLogs) {
  * MOSTRAR DATOS
  * ============================================================
  *
- * Esta función se ejecuta DESPUÉS de que estructura.js
- * haya terminado de construir window.estructura.
- *
- * Por tanto, aquí ya podemos utilizar:
- *
- *     window.estructura
- *
+ * TABLA 1: estructura general.
+ * TABLA 2: posiciones, acentos y patrón de claqueta.
+ * TABLA 3: eventos de todas las vueltas del ejercicio.
  * ============================================================
  */
 
 function mostrarDatos() {
 
+    const contenedor = obtenerContenedorLogs();
 
-    /*
-     * ========================================================
-     * COMPROBAR ESTRUCTURA
-     * ========================================================
-     *
-     * Si por algún motivo todavía no existe, no intentamos
-     * acceder a sus propiedades.
-     * ========================================================
-     */
+    // Evita duplicar tablas si se llama de nuevo a esta función.
+    contenedor.replaceChildren();
 
     if (!window.estructura) {
 
-        console.warn(
-            "No existe window.estructura"
-        );
+        console.warn("No existe window.estructura");
 
         return;
-
     }
 
-
-    /*
-     * ========================================================
-     * ESTRUCTURA GENERAL
-     * ========================================================
-     *
-     * Mostramos únicamente los datos generales.
-     *
-     * ENTRADA:
-     *
-     *     window.estructura
-     *
-     * SALIDA:
-     *
-     *     tabla HTML
-     * ========================================================
-     */
-
+    // TABLA 1
     mostrarTabla(
-
-        [
-            {
-                bpm:
-                    window.estructura.bpm,
-
-                divisiones:
-                    window.estructura.divisiones,
-
-                compases:
-                    window.estructura.compases,
-
-                laps:
-                    window.estructura.laps
-            }
-        ],
-
-        contenedorLogs,
-
-        "Estructura"
-
+        window.tablaEstructura || [],
+        contenedor,
+        "1. Estructura general"
     );
 
-
-    /*
-     * ========================================================
-     * POSICIONES
-     * ========================================================
-     *
-     * Las posiciones forman parte de estructura.
-     *
-     * Aquí podremos comprobar que los acentos procedentes
-     * de compas.json han llegado correctamente.
-     * ========================================================
-     */
-
+    // TABLA 2
     mostrarTabla(
-
-        window.estructura.posiciones,
-
-        contenedorLogs,
-
-        "Posiciones de la estructura"
-
+        window.posicionesEstructura ||
+            window.estructura.posiciones ||
+            [],
+        contenedor,
+        "2. Posiciones de la estructura"
     );
 
-
-    /*
-     * ========================================================
-     * CONFIGURACIÓN
-     * ========================================================
-     *
-     * Esta configuración sigue siendo temporal.
-     *
-     * Todavía NO procede de un constructor.
-     *
-     * La mantendremos así hasta que construyamos
-     * configuracion en el siguiente paso.
-     * ========================================================
-     */
-
+    // TABLA 3
     mostrarTabla(
-
-        configuracion,
-
-        contenedorLogs,
-
-        "Configuración"
-
+        window.configuracion || [],
+        contenedor,
+        "3. Configuración del ejercicio"
     );
-
 }
+
+
+window.crearTablaHTML = crearTablaHTML;
+window.mostrarTabla = mostrarTabla;
+window.mostrarDatos = mostrarDatos;
